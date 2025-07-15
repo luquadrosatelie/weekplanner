@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from flask import Flask, render_template
 
 # Configure logging
@@ -18,13 +19,31 @@ def index():
     firebase_project_id = "weekplannerpro"
     firebase_app_id = "1:764033294528:web:0377a5ee7b4aaf70f24d25"
     
+    firebase_config = None
+    firebase_is_available = False
+
+    # Check if all required Firebase credentials are provided
+    if firebase_api_key and firebase_project_id and firebase_app_id:
+        firebase_is_available = True
+        # Construct the Firebase config dictionary in Python
+        firebase_config = {
+            "apiKey": firebase_api_key,
+            "authDomain": f"{firebase_project_id}.firebaseapp.com",
+            "projectId": firebase_project_id,
+            "storageBucket": f"{firebase_project_id}.appspot.com",
+            # The messagingSenderId is the numeric part of the appId
+            "messagingSenderId": firebase_app_id.split(":")[1],
+            "appId": firebase_app_id,
+            # This can be found in your Firebase project settings under "General"
+            "measurementId": "G-MB93M4XSCW" 
+        }
+
     return render_template(
         "index.html",
-        firebase_api_key=firebase_api_key,
-        firebase_project_id=firebase_project_id,
-        firebase_app_id=firebase_app_id,
-        # Since we are hardcoding the credentials, this will always be true.
-        firebase_is_available=True
+        # Pass the config as a JSON string to avoid template issues in JS
+        # The `json.dumps` makes it a valid JSON string
+        firebase_config_json=json.dumps(firebase_config),
+        firebase_is_available=firebase_is_available
     )
 
 @app.route("/health")
