@@ -96,10 +96,8 @@ class WeeklyPlanner {
     }
 
     setupAuthStateListener() {
-        const isOfflineMode = localStorage.getItem('planner-offline-mode') === 'true';
-
-        // If Firebase isn't available or user chose offline, just load offline.
-        if (!firebaseAvailable || isOfflineMode) {
+        // If Firebase isn't available, just load offline.
+        if (!firebaseAvailable) {
             this.continueOffline();
             return;
         }
@@ -112,8 +110,14 @@ class WeeklyPlanner {
                 this.updateUserInfo(user);
                 await this.handleUserAuthenticated();
             } else {
-                // No user, show the login panel.
-                this.showAuthPanel();
+                // No user is signed in. Check if they previously chose offline mode.
+                const isOfflineMode = localStorage.getItem('planner-offline-mode') === 'true';
+                if (isOfflineMode) {
+                    this.continueOffline();
+                } else {
+                    // Otherwise, show the login panel.
+                    this.showAuthPanel();
+                }
             }
         });
     }
@@ -672,7 +676,7 @@ class WeeklyPlanner {
 
     handleScheduledTaskDragEnd(e) {
         e.target.classList.remove('dragging');
-        this.draggedTask = null;
+        this.dragged.Task = null;
     }
 
     copyScheduledTask(id) {
