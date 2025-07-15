@@ -18,7 +18,8 @@ export async function signInWithGoogle() {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
         
-        // Clear offline mode preference on successful login
+        // CRITICAL: Clear the offline mode preference on a successful login.
+        // This ensures the app doesn't fall back to offline mode on the next page load.
         localStorage.removeItem('planner-offline-mode');
         
         console.log('User signed in:', user.displayName);
@@ -56,11 +57,12 @@ export async function signOut() {
 
 export function onAuthStateChanged(callback) {
     if (!firebaseAvailable || !auth) {
-        // If Firebase is not available, call callback with null (no user)
+        // If Firebase is not available, immediately call the callback with null (no user)
         callback(null);
-        return () => {}; // Return empty unsubscribe function
+        return () => {}; // Return an empty unsubscribe function
     }
 
+    // Otherwise, use the real Firebase listener
     return firebaseOnAuthStateChanged(auth, callback);
 }
 
