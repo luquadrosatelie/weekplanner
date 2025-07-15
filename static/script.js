@@ -96,12 +96,14 @@ class WeeklyPlanner {
     }
 
     setupAuthStateListener() {
-        // If Firebase isn't available, just load offline.
+        // If Firebase isn't available at all, just load offline and stop.
         if (!firebaseAvailable) {
             this.continueOffline();
             return;
         }
 
+        // If Firebase is available, ALWAYS set up the listener.
+        // The logic inside will decide whether to show the login panel or not.
         onAuthStateChanged(auth, async (user) => {
             this.user = user;
             if (user) {
@@ -113,6 +115,7 @@ class WeeklyPlanner {
                 // No user is signed in. Check if they previously chose offline mode.
                 const isOfflineMode = localStorage.getItem('planner-offline-mode') === 'true';
                 if (isOfflineMode) {
+                    // If they chose offline, respect that choice.
                     this.continueOffline();
                 } else {
                     // Otherwise, show the login panel.
@@ -676,7 +679,7 @@ class WeeklyPlanner {
 
     handleScheduledTaskDragEnd(e) {
         e.target.classList.remove('dragging');
-        this.dragged.Task = null;
+        this.draggedTask = null;
     }
 
     copyScheduledTask(id) {
