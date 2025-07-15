@@ -25,12 +25,14 @@ def index():
     # Check if all required Firebase credentials are provided
     if firebase_api_key and firebase_project_id and firebase_app_id:
         firebase_is_available = True
-        # Construct the Firebase config dictionary in Python
+        # Construct the complete Firebase config dictionary in Python.
+        # This is the single source of truth for the configuration.
         firebase_config = {
             "apiKey": firebase_api_key,
             "authDomain": f"{firebase_project_id}.firebaseapp.com",
             "projectId": firebase_project_id,
-            "storageBucket": f"{firebase_project_id}.appspot.com",
+            # CORRECTED: Using the correct storage bucket format from the original file.
+            "storageBucket": f"{firebase_project_id}.firebasestorage.app",
             # The messagingSenderId is the numeric part of the appId
             "messagingSenderId": firebase_app_id.split(":")[1],
             "appId": firebase_app_id,
@@ -40,8 +42,8 @@ def index():
 
     return render_template(
         "index.html",
-        # Pass the config as a JSON string to avoid template issues in JS
-        # The `json.dumps` makes it a valid JSON string
+        # Pass the config as a valid JSON string.
+        # The `json.dumps` function handles the conversion.
         firebase_config_json=json.dumps(firebase_config),
         firebase_is_available=firebase_is_available
     )
