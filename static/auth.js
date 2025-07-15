@@ -18,6 +18,9 @@ export async function signInWithGoogle() {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
         
+        // Clear offline mode preference on successful login
+        localStorage.removeItem('planner-offline-mode');
+        
         console.log('User signed in:', user.displayName);
         return user;
     } catch (error) {
