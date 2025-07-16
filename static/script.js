@@ -86,7 +86,7 @@ class WeeklyPlanner {
     }
 
     setupEventListeners() {
-        // All event listeners related to login/logout have been removed.
+        // Event listeners for core functionality
         document.getElementById('sidebar-toggle')?.addEventListener('click', () => this.toggleSidebar());
         document.getElementById('show-sidebar-btn')?.addEventListener('click', () => this.toggleSidebar());
         document.getElementById('theme-toggle')?.addEventListener('click', () => this.toggleTheme());
@@ -110,7 +110,111 @@ class WeeklyPlanner {
             if (!e.target.closest('.task-item, .scheduled-task')) this.deselectAllTasks();
         });
         this.setupColorPickers();
+
+        // Event listeners for Import/Export functionality
+        document.getElementById('import-export-btn')?.addEventListener('click', () => this.showImportExportModal());
+        document.getElementById('export-btn')?.addEventListener('click', () => this.exportData());
+        document.getElementById('import-btn')?.addEventListener('click', () => this.triggerImport());
+        document.getElementById('import-file-input')?.addEventListener('change', (e) => this.importData(e));
     }
+
+    // --- Import/Export Functions ---
+
+    showImportExportModal() {
+        const modal = new bootstrap.Modal(document.getElementById('import-export-modal'));
+        modal.show();
+    }
+
+    exportData() {
+        try {
+            // Combine tasks and scheduled tasks into a single object for export
+            const dataToExport = {
+                tasks: this.tasks,
+                scheduledTasks: this.scheduledTasks
+            };
+            // Convert the data object to a nicely formatted JSON string
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            // Create a Blob from the JSON string
+            const dataBlob = new Blob([dataStr], { type: "application/json" });
+            
+            // Create a temporary URL for the Blob
+            const url = URL.createObjectURL(dataBlob);
+            // Create a temporary anchor element to trigger the download
+            const link = document.createElement('a');
+            link.href = url;
+            // Set the filename for the download
+            link.download = `planner-data-${new Date().toISOString().slice(0, 10)}.json`;
+            
+            // Trigger the download
+            document.body.appendChild(link);
+            link.click();
+            
+            // Clean up by removing the temporary link and revoking the URL
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            this.showSuccessToast('Dados exportados com sucesso!');
+            // Hide the modal after a successful export
+            bootstrap.Modal.getInstance(document.getElementById('import-export-modal')).hide();
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            this.showErrorToast('Ocorreu um erro ao exportar os dados.');
+        }
+    }
+
+    triggerImport() {
+        // Programmatically click the hidden file input to open the file dialog
+        document.getElementById('import-file-input').click();
+    }
+
+    importData(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return; // No file selected
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+
+                // Validate that the imported file has the correct structure
+                if (!data || !Array.isArray(data.tasks) || !Array.isArray(data.scheduledTasks)) {
+                    throw new Error('Formato de arquivo inválido.');
+                }
+
+                // Replace current tasks and scheduled tasks with the imported data
+                this.tasks = data.tasks;
+                this.scheduledTasks = data.scheduledTasks;
+
+                // Re-render the entire UI to reflect the new data
+                this.renderTasks();
+                this.renderScheduledTasks();
+
+                // Save the newly imported data to local storage
+                await this.saveData();
+
+                this.showSuccessToast('Dados importados com sucesso!');
+                // Hide the modal after a successful import
+                bootstrap.Modal.getInstance(document.getElementById('import-export-modal')).hide();
+            } catch (error) {
+                console.error('Error importing data:', error);
+                this.showErrorToast(`Erro ao importar: ${error.message}`);
+            } finally {
+                // Reset the file input so the 'change' event fires again if the same file is selected
+                event.target.value = '';
+            }
+        };
+        // Set up an error handler for the file reader
+        reader.onerror = () => {
+            this.showErrorToast('Não foi possível ler o arquivo.');
+            event.target.value = '';
+        };
+        // Read the file as text
+        reader.readAsText(file);
+    }
+
+    // --- Core Application Logic (mostly unchanged) ---
 
     updateSyncStatus(status) {
         this.syncStatus = status;
