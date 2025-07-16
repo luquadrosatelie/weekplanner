@@ -10,28 +10,14 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- User Authentication Panel -->
-        <div id="auth-panel" class="auth-panel" style="display: none;">
-            <div class="auth-content">
-                <h3>Bem-vindo ao Planejador Semanal</h3>
-                <p>Faça login para sincronizar suas tarefas na nuvem</p>
-                <button id="login-btn" class="btn btn-primary">
-                    <i class="bi bi-google"></i> Entrar com Google
-                </button>
-                <button id="continue-offline" class="btn btn-outline-secondary">
-                    Continuar Offline
-                </button>
-            </div>
-        </div>
+        <!-- The authentication panel is no longer needed for local storage mode -->
+        <div id="auth-panel" class="auth-panel" style="display: none;"></div>
 
         <!-- Sidebar for task management -->
         <div id="task-list-sidebar" class="sidebar">
             <div class="sidebar-header">
                 <h2>Tarefas</h2>
                 <div class="header-actions">
-                    <button id="force-login-btn" class="btn-header-action" title="Mudar de Conta / Forçar Login">
-                        <i class="bi bi-person-circle"></i>
-                    </button>
                     <button id="add-task-btn" class="btn-header-action" title="Adicionar nova tarefa">
                         <i class="bi bi-plus-lg"></i>
                     </button>
@@ -70,25 +56,18 @@
                 <!-- Tasks will be dynamically added here -->
             </div>
 
-            <!-- User info when authenticated -->
-            <div id="user-info" class="user-info" style="display: none;">
-                <div class="user-avatar">
-                    <img id="user-photo" src="" alt="User" class="user-photo">
-                </div>
+            <!-- User info section is kept for layout, but will show offline status -->
+            <div id="user-info" class="user-info">
                 <div class="user-details">
-                    <span id="user-name"></span>
-                    <small id="sync-status" class="sync-status">Sincronizado</small>
+                    <span id="user-name">Modo Local</span>
+                    <small id="sync-status" class="sync-status">Salvo no navegador</small>
                 </div>
-                <button id="logout-btn" class="btn btn-sm btn-outline-danger">
-                    <i class="bi bi-box-arrow-right"></i>
-                </button>
             </div>
         </div>
         
         <!-- Main content area with weekly grid -->
         <div id="week-view" class="main-content">
             <div class="week-header">
-                <!-- The "show sidebar" button is now on the left for better UX -->
                 <div class="header-left-controls">
                     <button id="show-sidebar-btn" class="btn btn-primary" title="Mostrar barra de tarefas">
                         <i class="bi bi-list"></i>
@@ -98,9 +77,6 @@
                 <h1>Planejador Semanal</h1>
                 
                 <div class="header-controls">
-                    <button id="header-login-btn" class="btn btn-success" title="Fazer login" style="display: none;">
-                        <i class="bi bi-google"></i> Login
-                    </button>
                     <div class="keyboard-shortcuts-btn" title="Atalhos do teclado">
                         <button id="shortcuts-btn" class="btn btn-outline-secondary">
                             <i class="bi bi-keyboard"></i>
@@ -127,7 +103,7 @@
         </div>
     </div>
     
-    <!-- Task creation modal -->
+    <!-- Modals (Create, Edit, Shortcuts) remain the same -->
     <div id="create-modal" class="modal fade" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -200,7 +176,6 @@
         </div>
     </div>
 
-    <!-- Task editing modal -->
     <div id="edit-modal" class="modal fade" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -273,7 +248,6 @@
         </div>
     </div>
 
-    <!-- Keyboard Shortcuts Modal -->
     <div id="shortcuts-modal" class="modal fade" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -321,7 +295,7 @@
         </div>
     </div>
 
-    <!-- Error Toast -->
+    <!-- Toasts (Error, Success) remain the same -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
         <div id="error-toast" class="toast" role="alert">
             <div class="toast-header">
@@ -334,7 +308,6 @@
         </div>
     </div>
 
-    <!-- Success Toast -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
         <div id="success-toast" class="toast" role="alert">
             <div class="toast-header">
@@ -347,425 +320,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-        import { getAuth } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-        import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-
-        // Set flag for Firebase availability, passed from the server
-        window.firebaseAvailable = {{ 'true' if firebase_is_available else 'false' }};
-
-        if (window.firebaseAvailable) {
-            try {
-                // CORRECTED: Parse the complete and valid JSON configuration object provided by the server.
-                // The `| safe` filter is crucial to prevent Jinja from auto-escaping quotes.
-                const firebaseConfig = JSON.parse('{{ firebase_config_json | safe }}');
-                
-                // Initialize Firebase only if config is valid
-                if (firebaseConfig) {
-                    window.firebaseApp = initializeApp(firebaseConfig);
-                    window.auth = getAuth(window.firebaseApp);
-                    window.db = getFirestore(window.firebaseApp);
-                } else {
-                    window.firebaseAvailable = false;
-                    console.error("Firebase config is null, running in offline mode.");
-                }
-            } catch (e) {
-                window.firebaseAvailable = false;
-                console.error("Error parsing Firebase config or initializing Firebase:", e);
-            }
-        }
-    </script>
+    <!-- The Firebase initialization script block has been removed -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="{{ url_for('static', filename='firebase-config.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='auth.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='firestore.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planejador Semanal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="app-container">
-        <!-- User Authentication Panel -->
-        <div id="auth-panel" class="auth-panel" style="display: none;">
-            <div class="auth-content">
-                <h3>Bem-vindo ao Planejador Semanal</h3>
-                <p>Faça login para sincronizar suas tarefas na nuvem</p>
-                <button id="login-btn" class="btn btn-primary">
-                    <i class="bi bi-google"></i> Entrar com Google
-                </button>
-                <button id="continue-offline" class="btn btn-outline-secondary">
-                    Continuar Offline
-                </button>
-            </div>
-        </div>
-
-        <!-- Sidebar for task management -->
-        <div id="task-list-sidebar" class="sidebar">
-            <div class="sidebar-header">
-                <h2>Tarefas</h2>
-                <div class="header-actions">
-                    <button id="force-login-btn" class="btn-header-action" title="Mudar de Conta / Forçar Login">
-                        <i class="bi bi-person-circle"></i>
-                    </button>
-                    <button id="add-task-btn" class="btn-header-action" title="Adicionar nova tarefa">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
-                    <button id="sidebar-toggle" class="btn-header-action" title="Recolher Barra Lateral">
-                        <i class="bi bi-chevron-left"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Search and Filter -->
-            <div class="search-filter-section">
-                <div class="search-container">
-                    <input type="text" id="task-search" placeholder="Buscar tarefas..." class="form-control">
-                    <i class="bi bi-search search-icon"></i>
-                </div>
-                <div class="filter-container">
-                    <select id="priority-filter" class="form-select">
-                        <option value="">Todas as prioridades</option>
-                        <option value="high">Alta prioridade</option>
-                        <option value="medium">Média prioridade</option>
-                        <option value="low">Baixa prioridade</option>
-                    </select>
-                    <select id="category-filter" class="form-select">
-                        <option value="">Todas as categorias</option>
-                        <option value="work">Trabalho</option>
-                        <option value="personal">Pessoal</option>
-                        <option value="health">Saúde</option>
-                        <option value="education">Educação</option>
-                        <option value="other">Outros</option>
-                    </select>
-                </div>
-            </div>
-            
-            <!-- Task list -->
-            <div id="task-list" class="task-list">
-                <!-- Tasks will be dynamically added here -->
-            </div>
-
-            <!-- User info when authenticated -->
-            <div id="user-info" class="user-info" style="display: none;">
-                <div class="user-avatar">
-                    <img id="user-photo" src="" alt="User" class="user-photo">
-                </div>
-                <div class="user-details">
-                    <span id="user-name"></span>
-                    <small id="sync-status" class="sync-status">Sincronizado</small>
-                </div>
-                <button id="logout-btn" class="btn btn-sm btn-outline-danger">
-                    <i class="bi bi-box-arrow-right"></i>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Main content area with weekly grid -->
-        <div id="week-view" class="main-content">
-            <div class="week-header">
-                <!-- The "show sidebar" button is now on the left for better UX -->
-                <div class="header-left-controls">
-                    <button id="show-sidebar-btn" class="btn btn-primary" title="Mostrar barra de tarefas">
-                        <i class="bi bi-list"></i>
-                    </button>
-                </div>
-
-                <h1>Planejador Semanal</h1>
-                
-                <div class="header-controls">
-                    <button id="header-login-btn" class="btn btn-success" title="Fazer login" style="display: none;">
-                        <i class="bi bi-google"></i> Login
-                    </button>
-                    <div class="keyboard-shortcuts-btn" title="Atalhos do teclado">
-                        <button id="shortcuts-btn" class="btn btn-outline-secondary">
-                            <i class="bi bi-keyboard"></i>
-                        </button>
-                    </div>
-                    <button id="theme-toggle" class="btn btn-outline-secondary" title="Alternar tema">
-                        <i class="bi bi-moon-stars"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Copy mode indicator -->
-            <div id="copy-mode-indicator" class="copy-mode-indicator" style="display: none;">
-                <span><i class="bi bi-clipboard"></i> Modo Copiar Ativo - Clique em um slot para colar</span>
-                <button id="exit-copy-mode" class="exit-copy-mode" title="Sair do modo copiar">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            
-            <!-- Weekly grid will be generated by JavaScript -->
-            <div id="weekly-grid" class="weekly-grid">
-                <!-- Grid will be dynamically generated -->
-            </div>
-        </div>
-    </div>
-    
-    <!-- Task creation modal -->
-    <div id="create-modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nova Tarefa</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="new-task-form">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="task-title" class="form-label">Título da Tarefa *</label>
-                            <input type="text" id="task-title" name="title" class="form-control" required maxlength="50">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="task-description" class="form-label">Descrição</label>
-                            <textarea id="task-description" name="description" class="form-control" rows="3" maxlength="200"></textarea>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="task-priority" class="form-label">Prioridade</label>
-                                <select id="task-priority" name="priority" class="form-select" required>
-                                    <option value="medium">Média</option>
-                                    <option value="high">Alta</option>
-                                    <option value="low">Baixa</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="task-category" class="form-label">Categoria</label>
-                                <select id="task-category" name="category" class="form-select" required>
-                                    <option value="work">Trabalho</option>
-                                    <option value="personal">Pessoal</option>
-                                    <option value="health">Saúde</option>
-                                    <option value="education">Educação</option>
-                                    <option value="other">Outros</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="task-duration" class="form-label">Duração (minutos)</label>
-                                <select id="task-duration" name="duration" class="form-select">
-                                    <option value="20">20 min</option>
-                                    <option value="40">40 min</option>
-                                    <option value="60">1 hora</option>
-                                    <option value="120">2 horas</option>
-                                    <option value="180">3 horas</option>
-                                    <option value="240">4 horas</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="task-color" class="form-label">Cor</label>
-                                <div class="color-picker-container">
-                                    <input type="color" id="task-color" name="color" class="form-control form-control-color" value="#3b82f6" required>
-                                    <input type="text" id="task-color-hex" placeholder="#3b82f6" pattern="^#[0-9A-Fa-f]{6}$" maxlength="7" class="form-control">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Adicionar Tarefa</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Task editing modal -->
-    <div id="edit-modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar Tarefa</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="edit-task-form">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="edit-task-title" class="form-label">Título da Tarefa *</label>
-                            <input type="text" id="edit-task-title" name="title" class="form-control" required maxlength="50">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="edit-task-description" class="form-label">Descrição</label>
-                            <textarea id="edit-task-description" name="description" class="form-control" rows="3" maxlength="200"></textarea>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="edit-task-priority" class="form-label">Prioridade</label>
-                                <select id="edit-task-priority" name="priority" class="form-select" required>
-                                    <option value="medium">Média</option>
-                                    <option value="high">Alta</option>
-                                    <option value="low">Baixa</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="edit-task-category" class="form-label">Categoria</label>
-                                <select id="edit-task-category" name="category" class="form-select" required>
-                                    <option value="work">Trabalho</option>
-                                    <option value="personal">Pessoal</option>
-                                    <option value="health">Saúde</option>
-                                    <option value="education">Educação</option>
-                                    <option value="other">Outros</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="edit-task-duration" class="form-label">Duração (minutos)</label>
-                                <select id="edit-task-duration" name="duration" class="form-select">
-                                    <option value="20">20 min</option>
-                                    <option value="40">40 min</option>
-                                    <option value="60">1 hora</option>
-                                    <option value="120">2 horas</option>
-                                    <option value="180">3 horas</option>
-                                    <option value="240">4 horas</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="edit-task-color" class="form-label">Cor</label>
-                                <div class="color-picker-container">
-                                    <input type="color" id="edit-task-color" name="color" class="form-control form-control-color" value="#3b82f6" required>
-                                    <input type="text" id="edit-task-color-hex" placeholder="#3b82f6" pattern="^#[0-9A-Fa-f]{6}$" maxlength="7" class="form-control">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Atualizar Tarefa</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Keyboard Shortcuts Modal -->
-    <div id="shortcuts-modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Atalhos do Teclado</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="shortcuts-list">
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>N</kbd>
-                            <span>Nova tarefa</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>F</kbd>
-                            <span>Buscar tarefas</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>T</kbd>
-                            <span>Alternar tema</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>B</kbd>
-                            <span>Alternar barra lateral</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Esc</kbd>
-                            <span>Fechar modal/sair do modo copiar</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Del</kbd>
-                            <span>Excluir tarefa selecionada</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>C</kbd>
-                            <span>Copiar tarefa agendada</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl</kbd> + <kbd>V</kbd>
-                            <span>Colar tarefa copiada</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Error Toast -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-        <div id="error-toast" class="toast" role="alert">
-            <div class="toast-header">
-                <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>
-                <strong class="me-auto">Erro</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body" id="error-message">
-            </div>
-        </div>
-    </div>
-
-    <!-- Success Toast -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-        <div id="success-toast" class="toast" role="alert">
-            <div class="toast-header">
-                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                <strong class="me-auto">Sucesso</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body" id="success-message">
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-        import { getAuth } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-        import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-
-        // Set flag for Firebase availability, passed from the server
-        window.firebaseAvailable = {{ 'true' if firebase_is_available else 'false' }};
-
-        if (window.firebaseAvailable) {
-            try {
-                // CORRECTED: Parse the complete and valid JSON configuration object provided by the server.
-                // The `| safe` filter is crucial to prevent Jinja from auto-escaping quotes.
-                const firebaseConfig = JSON.parse('{{ firebase_config_json | safe }}');
-                
-                // Initialize Firebase only if config is valid
-                if (firebaseConfig) {
-                    window.firebaseApp = initializeApp(firebaseConfig);
-                    window.auth = getAuth(window.firebaseApp);
-                    window.db = getFirestore(window.firebaseApp);
-                } else {
-                    window.firebaseAvailable = false;
-                    console.error("Firebase config is null, running in offline mode.");
-                }
-            } catch (e) {
-                window.firebaseAvailable = false;
-                console.error("Error parsing Firebase config or initializing Firebase:", e);
-            }
-        }
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- The module imports are kept, but the logic inside script.js will handle them gracefully -->
     <script type="module" src="{{ url_for('static', filename='firebase-config.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='auth.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='firestore.js') }}"></script>
