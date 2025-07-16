@@ -1,3 +1,5 @@
+// The imports are kept to prevent breaking the module structure,
+// but the new logic will not depend on them.
 import { auth, db, firebaseAvailable } from './firebase-config.js';
 import { signInWithGoogle, signOut, onAuthStateChanged } from './auth.js';
 import { 
@@ -19,7 +21,8 @@ class WeeklyPlanner {
         this.copyMode = false;
         this.copiedTask = null;
         this.selectedTaskElement = null;
-        this.user = null;
+        // User is always null in local mode
+        this.user = null; 
         this.syncStatus = 'offline';
 
         // Time configuration
@@ -61,124 +64,52 @@ class WeeklyPlanner {
     async init() {
         this.setupEventListeners();
         this.generateGrid();
-        this.getGridDimensions(); // Calculate grid dimensions after it's generated
+        this.getGridDimensions();
         this.createTimeNeedle();
         this.startNeedleUpdate();
         this.updateToggleButtonText();
         this.updateSidebarState();
         this.loadTheme();
         
-        this.setupAuthStateListener();
-        
-        setTimeout(() => this.initialScrollToNeedle(), 200);
-    }
-
-    showAuthPanel() {
-        const authPanel = document.getElementById('auth-panel');
-        authPanel.style.display = 'flex';
-    }
-
-    hideAuthPanel() {
-        const authPanel = document.getElementById('auth-panel');
-        authPanel.style.display = 'none';
-    }
-
-    async continueOffline() {
-        // Remember the user's choice to stay offline.
-        localStorage.setItem('planner-offline-mode', 'true');
-        
-        this.hideAuthPanel();
-        this.updateUserInfo(null); // This will show the header login button
+        // This now directly loads from local storage
         this.loadFromStorage();
         this.renderTasks();
         this.renderScheduledTasks();
-        this.updateSyncStatus('offline');
     }
 
-    setupAuthStateListener() {
-        // If Firebase isn't available at all, just load offline and stop.
-        if (!firebaseAvailable) {
-            this.continueOffline();
-            return;
-        }
+    showAuthPanel() {
+        // This function is no longer used in local-only mode
+    }
 
-        // If Firebase is available, ALWAYS set up the listener.
-        // The logic inside will decide whether to show the login panel or not.
-        onAuthStateChanged(auth, async (user) => {
-            this.user = user;
-            if (user) {
-                // User is signed in, load their data.
-                this.hideAuthPanel();
-                this.updateUserInfo(user);
-                await this.handleUserAuthenticated();
-            } else {
-                // No user is signed in. Check if they previously chose offline mode.
-                const isOfflineMode = localStorage.getItem('planner-offline-mode') === 'true';
-                if (isOfflineMode) {
-                    // If they chose offline, respect that choice.
-                    this.continueOffline();
-                } else {
-                    // Otherwise, show the login panel.
-                    this.showAuthPanel();
-                }
-            }
+    hideAuthPanel() {
+        // This function is no longer used in local-only mode
+    }
+
+    setupEventListeners() {
+        // All event listeners related to login/logout have been removed.
+        document.getElementById('sidebar-toggle')?.addEventListener('click', () => this.toggleSidebar());
+        document.getElementById('show-sidebar-btn')?.addEventListener('click', () => this.toggleSidebar());
+        document.getElementById('theme-toggle')?.addEventListener('click', () => this.toggleTheme());
+        document.getElementById('shortcuts-btn')?.addEventListener('click', () => new bootstrap.Modal(document.getElementById('shortcuts-modal')).show());
+        document.getElementById('exit-copy-mode')?.addEventListener('click', () => this.exitCopyMode());
+        document.getElementById('task-search')?.addEventListener('input', () => this.filterTasks());
+        document.getElementById('priority-filter')?.addEventListener('change', () => this.filterTasks());
+        document.getElementById('category-filter')?.addEventListener('change', () => this.filterTasks());
+        document.getElementById('add-task-btn')?.addEventListener('click', () => this.showCreateModal());
+        document.getElementById('new-task-form')?.addEventListener('submit', (e) => this.createTask(e));
+        document.getElementById('edit-task-form')?.addEventListener('submit', (e) => this.updateTask(e));
+        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        document.addEventListener('dragstart', (e) => {
+            if (!e.target.classList.contains('task-item') && !e.target.classList.contains('scheduled-task')) e.preventDefault();
         });
-    }
-
-    async handleUserAuthenticated() {
-        try {
-            this.updateSyncStatus('syncing');
-            
-            // Migrate local data to Firestore if it exists
-            const hasLocalData = localStorage.getItem('weeklyPlannerTasks') || localStorage.getItem('weeklyPlannerScheduledTasks');
-            if (hasLocalData) {
-                await migrateLocalDataToFirestore(this.tasks, this.scheduledTasks);
-                this.showSuccessToast('Dados locais migrados para a nuvem com sucesso!');
-            }
-
-            // Load data from Firestore
-            const [firestoreTasks, firestoreScheduledTasks] = await Promise.all([
-                loadTasksFromFirestore(),
-                loadScheduledTasksFromFirestore()
-            ]);
-
-            this.tasks = firestoreTasks;
-            this.scheduledTasks = firestoreScheduledTasks;
-            
-            this.renderTasks();
-            this.renderScheduledTasks();
-            this.updateSyncStatus('synced');
-        } catch (error) {
-            console.error('Error loading data from Firestore:', error);
-            this.showErrorToast('Erro ao carregar dados da nuvem. Usando dados locais.');
-            this.loadFromStorage();
-            this.renderTasks();
-            this.renderScheduledTasks();
-            this.updateSyncStatus('error');
-        }
-    }
-
-    updateUserInfo(user) {
-        const userInfo = document.getElementById('user-info');
-        const userPhoto = document.getElementById('user-photo');
-        const userName = document.getElementById('user-name');
-        const headerLoginBtn = document.getElementById('header-login-btn');
-
-        if (user) {
-            userInfo.style.display = 'flex';
-            userPhoto.src = user.photoURL || '';
-            userName.textContent = user.displayName || user.email;
-            
-            if (headerLoginBtn) {
-                headerLoginBtn.style.display = 'none';
-            }
-        } else {
-            userInfo.style.display = 'none';
-            
-            if (headerLoginBtn) {
-                headerLoginBtn.style.display = 'block';
-            }
-        }
+        window.addEventListener('resize', () => {
+            this.updateToggleButtonText();
+            this.getGridDimensions();
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.task-item, .scheduled-task')) this.deselectAllTasks();
+        });
+        this.setupColorPickers();
     }
 
     updateSyncStatus(status) {
@@ -190,17 +121,16 @@ class WeeklyPlanner {
         
         switch (status) {
             case 'synced':
-                syncStatusElement.textContent = 'Sincronizado';
+                syncStatusElement.textContent = 'Salvo localmente';
                 break;
             case 'syncing':
-                syncStatusElement.textContent = 'Sincronizando...';
-                break;
-            case 'error':
-                syncStatusElement.textContent = 'Erro de sincronização';
+                syncStatusElement.textContent = 'Salvando...';
                 break;
             case 'offline':
-                syncStatusElement.textContent = 'Modo offline';
+                syncStatusElement.textContent = 'Salvo no navegador';
                 break;
+            default:
+                syncStatusElement.textContent = 'Modo Local';
         }
     }
 
@@ -325,57 +255,6 @@ class WeeklyPlanner {
 
     formatTime(hour, minute) {
         return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-    }
-
-    setupEventListeners() {
-        document.getElementById('login-btn')?.addEventListener('click', () => signInWithGoogle().catch(err => this.showErrorToast(err.message)));
-        document.getElementById('header-login-btn')?.addEventListener('click', () => signInWithGoogle().catch(err => this.showErrorToast(err.message)));
-        document.getElementById('logout-btn')?.addEventListener('click', () => signOut().catch(err => this.showErrorToast(err.message)));
-        document.getElementById('continue-offline')?.addEventListener('click', () => this.continueOffline());
-        document.getElementById('force-login-btn')?.addEventListener('click', () => this.forceLogin());
-        document.getElementById('sidebar-toggle')?.addEventListener('click', () => this.toggleSidebar());
-        document.getElementById('show-sidebar-btn')?.addEventListener('click', () => this.toggleSidebar());
-        document.getElementById('theme-toggle')?.addEventListener('click', () => this.toggleTheme());
-        document.getElementById('shortcuts-btn')?.addEventListener('click', () => new bootstrap.Modal(document.getElementById('shortcuts-modal')).show());
-        document.getElementById('exit-copy-mode')?.addEventListener('click', () => this.exitCopyMode());
-        document.getElementById('task-search')?.addEventListener('input', () => this.filterTasks());
-        document.getElementById('priority-filter')?.addEventListener('change', () => this.filterTasks());
-        document.getElementById('category-filter')?.addEventListener('change', () => this.filterTasks());
-        document.getElementById('add-task-btn')?.addEventListener('click', () => this.showCreateModal());
-        document.getElementById('new-task-form')?.addEventListener('submit', (e) => this.createTask(e));
-        document.getElementById('edit-task-form')?.addEventListener('submit', (e) => this.updateTask(e));
-        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
-        document.addEventListener('dragstart', (e) => {
-            if (!e.target.classList.contains('task-item') && !e.target.classList.contains('scheduled-task')) e.preventDefault();
-        });
-        window.addEventListener('resize', () => {
-            this.updateToggleButtonText();
-            this.getGridDimensions();
-        });
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.task-item, .scheduled-task')) this.deselectAllTasks();
-        });
-        this.setupColorPickers();
-    }
-    
-    async forceLogin() {
-        // If a user is currently logged in, sign them out first.
-        if (this.user) {
-            try {
-                await signOut();
-            } catch (error) {
-                this.showErrorToast('Erro ao fazer logout: ' + error.message);
-            }
-        }
-        
-        // Clear the offline mode flag from local storage.
-        localStorage.removeItem('planner-offline-mode');
-        
-        // Hide user info panel and show the login button in the header
-        this.updateUserInfo(null);
-
-        // Show the main authentication panel.
-        this.showAuthPanel();
     }
 
     handleKeyboardShortcuts(e) {
@@ -766,19 +645,9 @@ class WeeklyPlanner {
     }
 
     async saveData() {
-        if (this.user && firebaseAvailable) {
-            try {
-                this.updateSyncStatus('syncing');
-                await Promise.all([saveTasksToFirestore(this.tasks), saveScheduledTasksToFirestore(this.scheduledTasks)]);
-                this.updateSyncStatus('synced');
-            } catch (error) {
-                console.error('Error saving to Firestore:', error);
-                this.updateSyncStatus('error');
-                this.saveToStorage();
-            }
-        } else {
-            this.saveToStorage();
-        }
+        // This function now only saves to local storage, ensuring data persists on refresh.
+        this.saveToStorage();
+        this.updateSyncStatus('synced');
     }
 
     loadFromStorage() {
@@ -786,6 +655,7 @@ class WeeklyPlanner {
             this.tasks = JSON.parse(localStorage.getItem('weeklyPlannerTasks')) || [];
             this.scheduledTasks = JSON.parse(localStorage.getItem('weeklyPlannerScheduledTasks')) || [];
             this.sidebarCollapsed = JSON.parse(localStorage.getItem('weeklyPlannerSidebarCollapsed')) || false;
+            console.log('Data loaded from local storage.');
         } catch (error) {
             console.error('Error loading from local storage:', error);
             this.showErrorToast('Erro ao carregar dados locais');
@@ -797,6 +667,7 @@ class WeeklyPlanner {
             localStorage.setItem('weeklyPlannerTasks', JSON.stringify(this.tasks));
             localStorage.setItem('weeklyPlannerScheduledTasks', JSON.stringify(this.scheduledTasks));
             localStorage.setItem('weeklyPlannerSidebarCollapsed', JSON.stringify(this.sidebarCollapsed));
+            console.log('Data saved to local storage.');
         } catch (error) {
             console.error('Error saving to local storage:', error);
             this.showErrorToast('Erro ao salvar dados localmente');
